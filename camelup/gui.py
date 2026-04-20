@@ -66,6 +66,16 @@ def _muted(hex_color: str, bg: str = APP_BG, alpha: float = 0.3) -> str:
     return f"#{r:02x}{g:02x}{b:02x}"
 
 
+def _btn(parent: tk.Widget, text: str, command,
+         bg: str = PANEL_BG, fg: str = "#2c3e50",
+         font=FONT_NORMAL, padx: int = 8, pady: int = 4) -> tk.Label:
+    """Styled button as tk.Label — tk.Button ignores bg/fg on macOS Aqua."""
+    lbl = tk.Label(parent, text=text, bg=bg, fg=fg, font=font,
+                   cursor="hand2", padx=padx, pady=pady, relief="flat")
+    lbl.bind("<Button-1>", lambda e: command())
+    return lbl
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 class CamelUpGUI:
@@ -97,11 +107,11 @@ class CamelUpGUI:
         self.dice_vars: Dict[str, tk.BooleanVar] = {
             cid: tk.BooleanVar(value=True) for cid, *_ in STANDARD_CAMELS
         }
-        self.dice_btns: Dict[str, tk.Button] = {}
+        self.dice_btns: Dict[str, tk.Label] = {}
 
         # Tile-mode buttons (kept so we can toggle their relief)
-        self._oasis_btn:  Optional[tk.Button] = None
-        self._mirage_btn: Optional[tk.Button] = None
+        self._oasis_btn:  Optional[tk.Label] = None
+        self._mirage_btn: Optional[tk.Label] = None
 
         self._build_ui()
         self.root.after(200, self._poll_results)
@@ -190,23 +200,14 @@ class CamelUpGUI:
 
         tile_row = tk.Frame(f, bg=PANEL_BG)
         tile_row.grid(row=r, column=0, sticky="w", pady=4); r += 1
-        self._oasis_btn = tk.Button(
-            tile_row, text="+1 Oasis", bg=OASIS_COLOR, fg="white",
-            font=FONT_NORMAL, relief="flat", padx=8, pady=4, cursor="hand2",
-            command=lambda: self._activate_tile(1),
-        )
+        self._oasis_btn = _btn(tile_row, "+1 Oasis", lambda: self._activate_tile(1),
+                               bg=OASIS_COLOR, fg="white")
         self._oasis_btn.pack(side="left", padx=(0, 6))
-        self._mirage_btn = tk.Button(
-            tile_row, text="-1 Mirage", bg=MIRAGE_COLOR, fg="white",
-            font=FONT_NORMAL, relief="flat", padx=8, pady=4, cursor="hand2",
-            command=lambda: self._activate_tile(-1),
-        )
+        self._mirage_btn = _btn(tile_row, "-1 Mirage", lambda: self._activate_tile(-1),
+                                bg=MIRAGE_COLOR, fg="white")
         self._mirage_btn.pack(side="left", padx=(0, 6))
-        tk.Button(
-            tile_row, text="Clear Tiles", bg="#95a5a6", fg="white",
-            font=FONT_NORMAL, relief="flat", padx=8, pady=4, cursor="hand2",
-            command=self._clear_tiles,
-        ).pack(side="left")
+        _btn(tile_row, "Clear Tiles", self._clear_tiles,
+             bg="#95a5a6", fg="white").pack(side="left")
 
         self._sep(f, r); r += 1
 
@@ -219,11 +220,8 @@ class CamelUpGUI:
             cfg, from_=4, to=32, textvariable=self.track_len_var, width=5,
             command=self._on_track_len_change,
         ).pack(side="left", padx=6)
-        tk.Button(
-            cfg, text="Reset Board", bg="#bdc3c7", fg="#2c3e50",
-            font=FONT_NORMAL, relief="flat", padx=8, pady=3, cursor="hand2",
-            command=self._reset,
-        ).pack(side="left", padx=4)
+        _btn(cfg, "Reset Board", self._reset,
+             bg="#bdc3c7", fg="#2c3e50", pady=3).pack(side="left", padx=4)
 
     # ── Solver panel ─────────────────────────────────────────────────────────
 
@@ -248,21 +246,12 @@ class CamelUpGUI:
             row=r, column=0, sticky="w"); r += 1
         btn_row = tk.Frame(f, bg=PANEL_BG)
         btn_row.grid(row=r, column=0, sticky="w", pady=4); r += 1
-        tk.Button(
-            btn_row, text="Exact", command=self.run_exact,
-            bg="#2c3e50", fg="white", font=FONT_BOLD,
-            relief="flat", padx=10, pady=5, cursor="hand2",
-        ).pack(side="left", padx=(0, 4))
-        tk.Button(
-            btn_row, text="Monte Carlo", command=self.run_mc,
-            bg="#8e44ad", fg="white", font=FONT_BOLD,
-            relief="flat", padx=10, pady=5, cursor="hand2",
-        ).pack(side="left", padx=(0, 4))
-        tk.Button(
-            btn_row, text="Cancel", command=self.cancel_solver,
-            bg="#c0392b", fg="white", font=FONT_NORMAL,
-            relief="flat", padx=10, pady=5, cursor="hand2",
-        ).pack(side="left")
+        _btn(btn_row, "Exact", self.run_exact,
+             bg="#2c3e50", fg="white", font=FONT_BOLD, padx=10, pady=5).pack(side="left", padx=(0, 4))
+        _btn(btn_row, "Monte Carlo", self.run_mc,
+             bg="#8e44ad", fg="white", font=FONT_BOLD, padx=10, pady=5).pack(side="left", padx=(0, 4))
+        _btn(btn_row, "Cancel", self.cancel_solver,
+             bg="#c0392b", fg="white", padx=10, pady=5).pack(side="left")
 
         self.status_var = tk.StringVar(value="Ready")
         tk.Label(
@@ -374,12 +363,8 @@ class CamelUpGUI:
             if self.camel_data[cid] is None:
                 continue
             any_placed = True
-            b = tk.Button(
-                self.dice_row_frame, text=cid,
-                font=("Helvetica", 9, "bold"), relief="flat",
-                padx=6, pady=4, cursor="hand2",
-                command=lambda c=cid: self._toggle_die(c),
-            )
+            b = _btn(self.dice_row_frame, cid, lambda c=cid: self._toggle_die(c),
+                     font=("Helvetica", 9, "bold"), padx=6, pady=4)
             b.pack(side="left", padx=2)
             self.dice_btns[cid] = b
             self._update_die_btn(cid)
